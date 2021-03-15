@@ -25,3 +25,10 @@ func (p *receiver) funcName(
 	body
 }
 ```
+
+## Build VSIX
+
+```sh
+npm install -g vsce
+
+```

@@ -3,7 +3,7 @@
 	"displayName": "go-utils",
 	"description": "Golang utils",
 	"publisher": "lukazakrajsek",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/bancek/vscode-go-utils"
@@ -21,7 +21,8 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:go-utils.breakLine"
+		"onCommand:go-utils.breakLine",
+		"onCommand:go-utils.breakLineArgsOnly"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -29,6 +30,10 @@
 			{
 				"command": "go-utils.breakLine",
 				"title": "Go utils: Break line"
+			},
+			{
+				"command": "go-utils.breakLineArgsOnly",
+				"title": "Go utils: Break line (args only)"
 			}
 		]
 	},

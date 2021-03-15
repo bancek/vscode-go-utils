@@ -11,6 +11,7 @@ type Range = [[number, number], [number, number]];
 interface Case {
   input: string;
   range: Range;
+  argsOnly: boolean;
   output: string;
 }
 
@@ -23,6 +24,7 @@ const cases: Case[] = [
       [0, 0],
       [0, 0],
     ],
+    argsOnly: false,
     output: `func funcName(
 	arg1 type1,
 	arg2 type2,
@@ -39,6 +41,7 @@ const cases: Case[] = [
       [0, 0],
       [0, 0],
     ],
+    argsOnly: false,
     output: `func funcName(
 	arg1 type1,
 	arg2 type2,
@@ -55,11 +58,49 @@ const cases: Case[] = [
       [0, 0],
       [0, 0],
     ],
+    argsOnly: false,
     output: `func funcName(
 	arg1 type1,
 	arg2 type2,
 	arg3 type3,
 ) (
+	error,
+) {
+	body
+}`,
+  },
+  {
+    input: `func funcName(arg1 type1, arg2 type2, arg3 type3) (error) {
+	body
+}`,
+    range: [
+      [0, 0],
+      [0, 0],
+    ],
+    argsOnly: true,
+    output: `func funcName(
+	arg1 type1,
+	arg2 type2,
+	arg3 type3,
+) (error) {
+	body
+}`,
+  },
+  {
+    input: `func funcName(arg1 func (a1 t1, a2 t2) (tres), arg2 type2, arg3 type3) (func (a1 t1, a2 t2) (tres), error) {
+	body
+}`,
+    range: [
+      [0, 0],
+      [0, 0],
+    ],
+    argsOnly: false,
+    output: `func funcName(
+	arg1 func (a1 t1, a2 t2) (tres),
+	arg2 type2,
+	arg3 type3,
+) (
+	func (a1 t1, a2 t2) (tres),
 	error,
 ) {
 	body
@@ -73,14 +114,12 @@ const cases: Case[] = [
       [0, 0],
       [0, 0],
     ],
+    argsOnly: true,
     output: `func funcName(
 	arg1 func (a1 t1, a2 t2) (tres),
 	arg2 type2,
 	arg3 type3,
-) (
-	func (a1 t1, a2 t2) (tres),
-	error,
-) {
+) (func (a1 t1, a2 t2) (tres), error) {
 	body
 }`,
   },
@@ -99,6 +138,7 @@ const cases: Case[] = [
       [1, 0],
       [1, 0],
     ],
+    argsOnly: false,
     output: `func funcName(
 	arg1 func (
 		a1 t1,
@@ -130,6 +170,7 @@ const cases: Case[] = [
       [5, 0],
       [5, 1],
     ],
+    argsOnly: false,
     output: `func funcName(
 	arg1 func (a1 t1, a2 t2) (tres),
 	arg2 type2,
@@ -154,6 +195,7 @@ const cases: Case[] = [
       [0, 0],
       [0, 0],
     ],
+    argsOnly: false,
     output: `func (p *receiver) funcName(
 	arg1 type1,
 	arg2 type2,
@@ -162,9 +204,22 @@ const cases: Case[] = [
 	body
 }`,
   },
+  {
+    input: `funcName(arg1, arg2, arg3)`,
+    range: [
+      [0, 0],
+      [0, 0],
+    ],
+    argsOnly: false,
+    output: `funcName(
+	arg1,
+	arg2,
+	arg3,
+)`,
+  },
 ];
 
-async function doBreakLine(input: string, range: Range) {
+async function doBreakLine(input: string, range: Range, argsOnly: boolean) {
   let testFilePath = path.join(
     os.tmpdir(),
     "break-line-" + Math.random() * 100000 + ".go"
@@ -180,7 +235,7 @@ async function doBreakLine(input: string, range: Range) {
     new vscode.Position(range[1][0], range[1][1])
   );
 
-  breakLine();
+  breakLine(argsOnly);
 
   await new Promise((resolve) => {
     setTimeout(resolve, 200);
@@ -189,12 +244,14 @@ async function doBreakLine(input: string, range: Range) {
   return editor.document.getText();
 }
 
-suite("breakLine", () => {
+suite("breakLine", function() {
+  this.timeout(10000);
+
   test("breakLine", async () => {
     for (const c of cases) {
-      const output = await doBreakLine(c.input, c.range);
+      const output = await doBreakLine(c.input, c.range, c.argsOnly);
 
-      assert.equal(output, c.output);
+      assert.strictEqual(output, c.output);
     }
   });
 });

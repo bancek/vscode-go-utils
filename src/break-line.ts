@@ -2,7 +2,7 @@
 
 import * as vscode from "vscode";
 
-export async function breakLine() {
+export async function breakLine(argsOnly: boolean) {
   let editor = vscode.window.activeTextEditor!;
 
   const line = editor.selection.start.line;
@@ -12,43 +12,39 @@ export async function breakLine() {
     new vscode.Position(line, lineText.length)
   );
 
-  const newText = breakLineText(lineText);
+  const newText = breakLineText(lineText, argsOnly);
 
   await editor.edit((editBuilder) => {
     editBuilder.replace(oldSelection, newText);
   });
 }
 
-export function breakLineText(text: string): string {
-  if (/\bfunc\b /.test(text)) {
-    return breakLineTextFunc(text);
-  }
-
-  return text;
-}
-
-export function breakLineTextFunc(text: string): string {
+export function breakLineText(text: string, argsOnly: boolean): string {
   // func name(args) {
   // func name(args) res {
   // func name(args) (res) {
   // func (p *receiver) name(args) (res) {
+  // name(args) {
   let bracketDepth = 0;
-  let bracketsCount = 0;
+  let topLevelBracketsCount = 0;
+  let done = false;
 
   let oldCharacters = [...text];
   let newCharacters: string[] = [];
 
   const prefixMatch = text.match(/^(\s+)/);
-  const prefix = prefixMatch === null ? '' : prefixMatch[1];
+  const prefix = prefixMatch === null ? "" : prefixMatch[1];
   const isMethod = text.match(/^func \(/);
 
-  const insideReceiver = () => bracketsCount === 1 && isMethod;
+  const insideReceiver = () => topLevelBracketsCount === 1 && isMethod;
 
   for (let i = 0; i < oldCharacters.length; i++) {
     const c = oldCharacters[i];
 
-    if (c === "(") {
-      bracketsCount++;
+    if (!done && c === "(") {
+      if (bracketDepth === 0) {
+        topLevelBracketsCount++;
+      }
       bracketDepth++;
       newCharacters.push(c);
 
@@ -57,7 +53,7 @@ export function breakLineTextFunc(text: string): string {
         newCharacters.push("\t");
         newCharacters.push(prefix);
       }
-    } else if (c === ")") {
+    } else if (!done && c === ")") {
       if (bracketDepth === 1 && !insideReceiver()) {
         newCharacters.push(",");
         newCharacters.push("\n");
@@ -66,7 +62,11 @@ export function breakLineTextFunc(text: string): string {
 
       newCharacters.push(c);
       bracketDepth--;
-    } else if (c === "," && bracketDepth === 1) {
+
+      if (bracketDepth === 0 && !insideReceiver() && argsOnly) {
+        done = true;
+      }
+    } else if (!done && c === "," && bracketDepth === 1) {
       newCharacters.push(c);
       newCharacters.push("\n");
       newCharacters.push("\t");
