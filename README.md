@@ -30,5 +30,7 @@ func (p *receiver) funcName(
 
 ```sh
 npm install -g vsce
+npm install
 
+vsce package
 ```
